@@ -1,0 +1,18 @@
+# never commit secrets
+.env
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# runtime data
+*.db
+*.db-journal
+
+# editor / os junk
+.idea/
+.vscode/
+.DS_Store

@@ -1,1 +1,102 @@
 # Blahajd
+
+A small Discord bot that handles the yearly role refresh for a student
+cybersecurity server. Blåhaj the shark DMs every member a few questions and
+sets their roles based on the answers.
+
+## How it works
+
+- An admin (or the server owner) runs `/rollout`, which DMs every member a
+  button-based interview.
+- Questions: who you are (student / graduate / teacher), your name (with a
+  polite request to set your nickname accordingly), and for students: program
+  (Cloud & Cybersecurity first — it's the common one), year, and an optional
+  specialisation that most people skip. Teachers and alumni are done after
+  the first two questions.
+- The interview ends with a confirmation screen listing exactly which roles
+  would be applied.
+- Confirming posts a **role request** to a mod-only channel with
+  Approve/Reject buttons. Roles are never granted without a maintainer's
+  approval.
+- On **approve** the member gets their roles (replaced, not stacked: someone
+  who was `2CCS 🐊` and answers 3rd year loses `2CCS 🐊` and gains `3CCS 🐊`)
+  plus a DM confirming it. On **reject** they get a DM saying the request was
+  denied. The bot only ever touches the roles it finds in `.env`, nothing
+  else.
+
+## Role logic
+
+| Answers | Roles given |
+|---|---|
+| Teacher | Docent 🐐 |
+| Graduate | Alumni 🦒 |
+| Student, APP/AI | ITF🐊 + APP/AIHAAI/ML ㊙️ + year role |
+| Student, Digital Innovation | ITF🐊 + Digital Innovation 🤖 + year role |
+| Student, Cloud & Cybersecurity | ITF🐊 + year role |
+| 2nd year student | + 2CCS 🐊 |
+| 3rd year student | + 3CCS🐊 |
+| 3rd year, Cloud & Cybersecurity | optionally + Ethical Hacking 🥷 or Cloud Automation & Defence 🧙♂️ |
+
+## Setup
+
+1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications)
+   and add a bot user to it.
+2. In the developer portal, enable **Privileged Gateway Intents → Members**.
+3. Invite the bot with the `Manage Roles`, `Send Messages`, `View Channels`
+   and `Read Message History` permissions, plus the `applications.commands`
+   scope:
+
+   ```
+   https://discord.com/api/oauth2/authorize?client_id=<APP_ID>&permissions=1051776&scope=bot%20applications.commands
+   ```
+
+   You can also pick the permissions manually in the portal — those four are
+   all it needs.
+4. Make sure the bot's role sits **above** the roles it has to manage in
+   Server Settings.
+5. Copy the example config and fill it in:
+
+   ```
+   cp .env.example .env
+   ```
+
+   Enable Developer Mode (User Settings → Advanced) if you haven't, then
+   right-click each role in Server Settings → Copy Role ID. Also grab the ID
+   of the mod-only channel where requests should land and the ID of the
+   **Maintainer** role (whoever holds it can run the admin commands below and
+   approve requests).
+6. Install and run:
+
+   ```
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   python bot.py
+   ```
+
+## Commands
+
+`/update` is for everyone; the rest need the `Maintainer` role (or the server
+owner).
+
+| Command | Who can use it | What it does |
+|---|---|---|
+| `/update` | Everyone | Re-runs the interview on yourself — the DM flow asks the questions, a maintainer approves |
+| `/rollout` | Maintainer | Starts the annual rollout and DMs every member |
+| `/interview @user` | Maintainer | Sends the interview to a single member (late joiners, closed DMs) |
+| `/rollout_status` | Maintainer | Shows how many members completed / are stuck / can't be DM'd |
+| `/rollout_reset` | Maintainer | Wipes all sessions before the next year's rollout (audit log is kept) |
+
+## Notes
+
+- Roles are **trust-based**: answers are not verified against any registry.
+  The bot was built for a small, well-known community.
+- Every role change is written to an audit log in SQLite (`blahajd.db`).
+- Sessions survive bot restarts, but an interview interrupted by a restart is
+  best redone with `/interview @user`.
+- DMs are throttled to one per second during a rollout to stay friendly to the
+  Discord API.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
