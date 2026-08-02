@@ -10,24 +10,13 @@ import logging
 import discord
 
 import config
+import embeds
+import guards
+import guild_utils
 import roles
 import store
 
 log = logging.getLogger("blahajd.approvals")
-
-FOOTER = "Cloud & Cybersecurity Discord"
-REQUEST_COLOR = discord.Color.orange()
-
-
-def styled(
-    title: str | None = None,
-    description: str | None = None,
-    color: discord.Color = REQUEST_COLOR,
-) -> discord.Embed:
-    embed = discord.Embed(title=title, description=description, color=color)
-    embed.set_footer(text=FOOTER)
-    return embed
-
 
 # answers -> something a mod can actually read
 ANSWER_LABELS = {
@@ -50,16 +39,6 @@ ANSWER_LABELS = {
 }
 
 
-def is_maintainer(interaction: discord.Interaction) -> bool:
-    """Guild owner or someone holding the Maintainer role."""
-    user = interaction.user
-    if not isinstance(user, discord.Member):
-        return False
-    if user == interaction.guild.owner:
-        return True
-    return any(role.id == config.CONFIG.maintainer_role_id for role in user.roles)
-
-
 def _answers_summary(answers: dict) -> str:
     lines = []
     for step, value in answers.items():
@@ -74,15 +53,16 @@ def _answers_summary(answers: dict) -> str:
 def build_request_embed(
     member: discord.Member, answers: dict, to_add: set[str], to_remove: set[str]
 ) -> discord.Embed:
-    embed = styled(
+    embed = embeds.styled(
         title="Role request 🦈",
         description=f"{member.mention} ({member.display_name}) submitted a role request.",
+        color=embeds.REQUEST,
     )
     name = answers.get("name")
     if name:
         embed.add_field(
             name="Name",
-            value=f"{name} — remind them to set their nickname accordingly.",
+            value=name,
             inline=False,
         )
     embed.add_field(name="Answers", value=_answers_summary(answers), inline=False)
@@ -107,18 +87,18 @@ def _outcome_embed(approved: bool, added: set[str] = frozenset()) -> discord.Emb
             )
         else:
             description = "Your roles are already up to date. Enjoy the new year!"
-        return styled(
+        return embeds.styled(
             title="Access granted ✅",
             description=description,
-            color=discord.Color.green(),
+            color=embeds.DONE,
         )
-    return styled(
+    return embeds.styled(
         title="Access denied 🚫",
         description=(
             "Your role request didn't pass review. If that feels like a false "
             "positive, appeal to the maintainers."
         ),
-        color=discord.Color.red(),
+        color=embeds.ERROR,
     )
 
 
@@ -132,20 +112,23 @@ class RequestView(discord.ui.View):
         self.target = target
 
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.success)
-    async def approve(self, interaction: discord.Interaction, _):
+    async def approve(self, interaction: discord.Interaction, _: discord.ui.Button):
         await self._decide(interaction, approved=True)
 
     @discord.ui.button(label="Reject", style=discord.ButtonStyle.danger)
-    async def reject(self, interaction: discord.Interaction, _):
+    async def reject(self, interaction: discord.Interaction, _: discord.ui.Button):
         await self._decide(interaction, approved=False)
 
     async def _decide(self, interaction: discord.Interaction, approved: bool) -> None:
-        if interaction.channel is None or interaction.channel.id != config.CONFIG.request_channel_id:
+        if (
+            interaction.channel is None
+            or interaction.channel.id != config.CONFIG.request_channel_id
+        ):
             await interaction.response.send_message(
                 "That's not the approval channel.", ephemeral=True
             )
             return
-        if not is_maintainer(interaction):
+        if not guards.is_maintainer(interaction):
             await interaction.response.send_message(
                 "You need the Maintainer role to do that.", ephemeral=True
             )
@@ -155,7 +138,7 @@ class RequestView(discord.ui.View):
         embed = None
         if interaction.message.embeds:
             embed = interaction.message.embeds[0].copy()
-            embed.color = discord.Color.green() if approved else discord.Color.red()
+            embed.color = embeds.DONE if approved else embeds.ERROR
             embed.set_footer(
                 text=f"{'Approved' if approved else 'Rejected'} by {interaction.user.display_name}"
             )
@@ -180,33 +163,31 @@ class RequestView(discord.ui.View):
             log.warning("could not DM %s the decision: %s", self.member_id, exc)
 
     async def _apply_roles(self, client: discord.Client) -> discord.Embed:
-        cfg = config.CONFIG
-        guild = client.get_guild(cfg.guild_id)
-        if guild is None:
-            log.error("guild %s missing while approving roles", cfg.guild_id)
+        guild_obj = client.get_guild(config.CONFIG.guild_id)
+        if guild_obj is None:
+            log.error("guild %s missing while approving roles", config.CONFIG.guild_id)
             return _outcome_embed(approved=False)
 
-        roles_by_key = {key: guild.get_role(rid) for key, rid in cfg.role_ids.items()}
-        missing = [key for key, role in roles_by_key.items() if role is None]
+        roles_by_key, missing = guild_utils.configured_roles(guild_obj)
         if missing:
-            log.error("configured roles missing in guild %s: %s", guild.id, missing)
+            log.error("configured roles missing in guild %s: %s", guild_obj.id, missing)
             return _outcome_embed(approved=False)
 
         try:
-            member = await guild.fetch_member(self.member_id)
+            member = await guild_obj.fetch_member(self.member_id)
         except discord.NotFound:
             store.upsert_session(self.member_id, {}, status="cancelled")
-            return styled(
+            return embeds.styled(
                 title="Nothing applied",
-                description="The member is no longer in the server, so their roles weren't touched.",
-                color=discord.Color.red(),
+                description=(
+                    "The member is no longer in the server, so their roles weren't touched."
+                ),
+                color=embeds.ERROR,
             )
 
         # re-diff against their current roles; things may have changed while
         # the request sat in the channel
-        current = {key for key, role in roles_by_key.items() if role in member.roles}
-        to_add = self.target - current
-        to_remove = current - self.target
+        to_add, to_remove = guild_utils.role_diff(member, self.target, roles_by_key)
 
         try:
             if to_remove:
@@ -219,13 +200,13 @@ class RequestView(discord.ui.View):
                 )
         except (discord.Forbidden, discord.HTTPException) as exc:
             log.warning("role change failed for %s: %s", self.member_id, exc)
-            return styled(
+            return embeds.styled(
                 title="Couldn't apply",
                 description=(
                     "The roles couldn't be applied — Blåhaj's permissions got "
                     "revoked? Check the bot's role in Server Settings."
                 ),
-                color=discord.Color.red(),
+                color=embeds.ERROR,
             )
 
         store.log_action(

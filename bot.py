@@ -11,8 +11,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import approvals
 import config
+import embeds
+import guards
 import interview
 import store
 
@@ -58,8 +59,21 @@ def configured_guild() -> discord.Guild | None:
 # command would take up to an hour to propagate
 TARGET_GUILD = discord.Object(id=config.CONFIG.guild_id)
 
-# shared with the approval view
-is_maintainer = approvals.is_maintainer
+
+# guard rejections are turned into friendly ephemeral messages here
+@client.tree.error
+async def on_tree_error(
+    interaction: discord.Interaction, error: app_commands.AppCommandError
+) -> None:
+    if isinstance(error, guards.GuardError):
+        await guards.reply_guard_error(interaction, error)
+        return
+    log.error(
+        "unhandled error running %s: %s",
+        getattr(interaction.command, "name", "?"),
+        error,
+        exc_info=error,
+    )
 
 
 @client.event
@@ -98,26 +112,14 @@ async def on_ready() -> None:
 async def send_interview_message(member: discord.Member) -> None:
     """DM a member the start prompt. Raises Forbidden if DMs are closed."""
     dm = await member.create_dm()
-    await dm.send(
-        embed=interview.rollout_embed(), view=interview.StartView(member.id)
-    )
+    await dm.send(embed=interview.rollout_embed(), view=interview.StartView(member.id))
 
 
-@client.tree.command(
-    name="rollout", description="DM every member with the yearly role interview"
-)
+@client.tree.command(name="rollout", description="DM every member with the yearly role interview")
 @app_commands.guilds(TARGET_GUILD)
+@app_commands.check(guards.check_guild)
+@app_commands.check(guards.check_maintainer)
 async def cmd_rollout(interaction: discord.Interaction) -> None:
-    if not is_maintainer(interaction):
-        await interaction.response.send_message(
-            "You need the Maintainer role to use this.", ephemeral=True
-        )
-        return
-    if interaction.guild_id != config.CONFIG.guild_id:
-        await interaction.response.send_message(
-            "This bot is configured for another server.", ephemeral=True
-        )
-        return
     await interaction.response.defer(thinking=True)
 
     guild = configured_guild()
@@ -141,6 +143,9 @@ async def cmd_rollout(interaction: discord.Interaction) -> None:
         except discord.HTTPException as exc:
             failed += 1
             log.warning("DM to %s failed: %s", member.id, exc)
+        except Exception as exc:  # noqa: BLE001 - keep the rollout going
+            failed += 1
+            log.exception("unexpected error DMing %s: %s", member.id, exc)
         await asyncio.sleep(1.0)  # take it easy on the API during big rollouts
 
     description = f"Sent to **{sent}** members.\nCould not DM: **{failed}**"
@@ -152,28 +157,16 @@ async def cmd_rollout(interaction: discord.Interaction) -> None:
         embed=discord.Embed(
             title="Rollout started 🚀",
             description=description,
-            color=discord.Color.blurple(),
+            color=embeds.BRAND,
         )
     )
 
 
-@client.tree.command(
-    name="interview", description="Send the role interview to a single member"
-)
+@client.tree.command(name="interview", description="Send the role interview to a single member")
 @app_commands.guilds(TARGET_GUILD)
-async def cmd_interview(
-    interaction: discord.Interaction, member: discord.Member
-) -> None:
-    if not is_maintainer(interaction):
-        await interaction.response.send_message(
-            "You need the Maintainer role to use this.", ephemeral=True
-        )
-        return
-    if interaction.guild_id != config.CONFIG.guild_id:
-        await interaction.response.send_message(
-            "This bot is configured for another server.", ephemeral=True
-        )
-        return
+@app_commands.check(guards.check_guild)
+@app_commands.check(guards.check_maintainer)
+async def cmd_interview(interaction: discord.Interaction, member: discord.Member) -> None:
     if member.bot:
         await interaction.response.send_message(
             "Bots already have all the permissions. Nice try though.",
@@ -190,52 +183,38 @@ async def cmd_interview(
             ephemeral=True,
         )
         return
-    await interaction.followup.send(
-        f"Interview sent to {member.display_name}.", ephemeral=True
-    )
+    await interaction.followup.send(f"Interview sent to {member.display_name}.", ephemeral=True)
 
 
 @client.tree.command(
     name="update",
-    description="Request a role update for yourself (new year, new roles)",
+    description="Request a role update for yourself",
 )
 @app_commands.guilds(TARGET_GUILD)
+@app_commands.check(guards.check_guild)
 async def cmd_update(interaction: discord.Interaction) -> None:
     """The public version of /interview — anyone can run it on themselves."""
-    if interaction.guild_id != config.CONFIG.guild_id:
-        await interaction.response.send_message(
-            "This bot is configured for another server.", ephemeral=True
-        )
-        return
     await interaction.response.defer(thinking=True)
     try:
         await send_interview_message(interaction.user)
         store.upsert_session(interaction.user.id, {}, status="sent")
     except discord.Forbidden:
         await interaction.followup.send(
-            "I couldn't reach you — your DMs are closed. Open up and try again.",
+            "I couldn't reach you as your DMs are closed. Open up and try again.",
             ephemeral=True,
         )
         return
     await interaction.followup.send(
-        "Check your DMs — Blåhaj is knocking. A maintainer will review your request.",
+        "Check your DMs — Blåhaj is knocking.",
         ephemeral=True,
     )
 
 
 @client.tree.command(name="rollout_status", description="How the rollout is going")
 @app_commands.guilds(TARGET_GUILD)
+@app_commands.check(guards.check_guild)
+@app_commands.check(guards.check_maintainer)
 async def cmd_rollout_status(interaction: discord.Interaction) -> None:
-    if not is_maintainer(interaction):
-        await interaction.response.send_message(
-            "You need the Maintainer role to use this.", ephemeral=True
-        )
-        return
-    if interaction.guild_id != config.CONFIG.guild_id:
-        await interaction.response.send_message(
-            "This bot is configured for another server.", ephemeral=True
-        )
-        return
     guild = configured_guild()
     if guild is None:
         await interaction.response.send_message(
@@ -260,26 +239,18 @@ async def cmd_rollout_status(interaction: discord.Interaction) -> None:
     )
     await interaction.response.send_message(
         embed=discord.Embed(
-            title="Rollout status", description=description, color=discord.Color.blurple()
+            title="Rollout status",
+            description=description,
+            color=embeds.BRAND,
         )
     )
 
 
-@client.tree.command(
-    name="rollout_reset", description="Wipe all sessions (audit log is kept)"
-)
+@client.tree.command(name="rollout_reset", description="Wipe all sessions (audit log is kept)")
 @app_commands.guilds(TARGET_GUILD)
+@app_commands.check(guards.check_guild)
+@app_commands.check(guards.check_maintainer)
 async def cmd_rollout_reset(interaction: discord.Interaction) -> None:
-    if not is_maintainer(interaction):
-        await interaction.response.send_message(
-            "You need the Maintainer role to use this.", ephemeral=True
-        )
-        return
-    if interaction.guild_id != config.CONFIG.guild_id:
-        await interaction.response.send_message(
-            "This bot is configured for another server.", ephemeral=True
-        )
-        return
     store.clear_sessions()
     await interaction.response.send_message(
         "Sessions cleared. Use /rollout to start a fresh round.", ephemeral=True

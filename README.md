@@ -40,18 +40,19 @@ sets their roles based on the answers.
 ## Setup
 
 1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications)
-   and add a bot user to it.
+   and add a bot user to it. Copy the bot token (**Bot → Token**) — it goes
+   into `DISCORD_TOKEN` in `.env`.
 2. In the developer portal, enable **Privileged Gateway Intents → Members**.
 3. Invite the bot with the `Manage Roles`, `Send Messages`, `View Channels`
    and `Read Message History` permissions, plus the `applications.commands`
    scope:
 
    ```
-   https://discord.com/api/oauth2/authorize?client_id=<APP_ID>&permissions=1051776&scope=bot%20applications.commands
+   https://discord.com/api/oauth2/authorize?client_id=<APP_ID>&permissions=268504064&scope=bot%20applications.commands
    ```
 
-   You can also pick the permissions manually in the portal — those four are
-   all it needs.
+   `268504064` is the sum of exactly those four permissions. You can also pick
+   them manually in the portal.
 4. Make sure the bot's role sits **above** the roles it has to manage in
    Server Settings.
 5. Copy the example config and fill it in:
@@ -96,6 +97,22 @@ owner).
   best redone with `/interview @user`.
 - DMs are throttled to one per second during a rollout to stay friendly to the
   Discord API.
+
+## Development
+
+Format and lint before opening a PR:
+
+```
+pip install -r requirements-dev.txt
+ruff check .
+ruff format .
+```
+
+There are no unit tests yet, but the pure-logic layer (`roles.py`) and the
+database layer (`store.py`) were deliberately kept dependency-free so tests
+can be added without a running bot. The list of managed roles lives only in
+`roles.py`; `config.py` verifies its env mapping matches at startup, so the two
+can't silently drift.
 
 ## License
 

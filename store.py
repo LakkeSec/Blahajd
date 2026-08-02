@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 # rejected, cancelled
 STATUSES = ("sent", "active", "pending", "completed", "rejected", "cancelled")
 
-_db_path: str = ""
+_db_path: str | None = None
 
 
 def init(db_path: str) -> None:
@@ -42,10 +42,12 @@ def init(db_path: str) -> None:
 
 
 def _conn() -> sqlite3.Connection:
+    if _db_path is None:
+        raise RuntimeError("store.init() must be called before any store use")
     return sqlite3.connect(_db_path)
 
 
-def upsert_session(user_id: int, answers: dict, status: str) -> None:
+def upsert_session(user_id: int, answers: dict[str, str], status: str) -> None:
     if status not in STATUSES:
         raise ValueError(f"unknown session status: {status}")
     with _conn() as conn:
@@ -65,9 +67,7 @@ def upsert_session(user_id: int, answers: dict, status: str) -> None:
 def status_counts() -> dict[str, int]:
     counts = {status: 0 for status in STATUSES}
     with _conn() as conn:
-        rows = conn.execute(
-            "SELECT status, COUNT(*) FROM sessions GROUP BY status"
-        ).fetchall()
+        rows = conn.execute("SELECT status, COUNT(*) FROM sessions GROUP BY status").fetchall()
     for status, n in rows:
         counts[status] = n
     counts["total"] = sum(counts.values())

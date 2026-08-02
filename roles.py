@@ -1,12 +1,14 @@
-"""Pure logic: interview answers -> the set of roles a member should have.
+"""Pure logic for interview answers -> the set of roles a member should have.
 
-No discord imports here on purpose, so this stays unit-testable.
-Role *keys* are used throughout; keys map to real role IDs in config.py.
+No discord imports here on purpose, so this stays unit-testable. Role *keys*
+are the single source of truth; they map to real role IDs in config.py, and
+guards.py assumes these are the only roles the bot manages.
 """
 
-# every role the bot is allowed to manage. anything a member has that isn't
-# in the resolved target set gets removed.
-MANAGED_ROLES = (
+# every role key the bot knows about. config.py maps each of these to an env
+# var (and from there to a real role ID), and the bot never touches any role
+# that isn't in this list.
+ROLE_KEYS = (
     "itf",
     "app_ai",
     "digital_innovation",

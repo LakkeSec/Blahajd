@@ -10,6 +10,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+import roles
+
+# role key -> the env var that holds its ID. The keys themselves live in
+# roles.ROLE_KEYS, and _check_role_keys() keeps the two in sync.
 ROLE_ENV_KEYS = {
     "itf": "ROLE_ITF",
     "app_ai": "ROLE_APP_AI",
@@ -36,14 +40,30 @@ class Config:
 def _env_or_exit(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
-        raise SystemExit(
-            f"Missing {name} in .env — copy .env.example to .env and fill it in."
-        )
+        raise SystemExit(f"Missing {name} in .env — copy .env.example to .env and fill it in.")
     return value
+
+
+def _check_role_keys() -> None:
+    """Fail fast if the role list in roles.py drifts from the config mapping.
+
+    Both sides claim to know the authoritative set of roles; keeping them in
+    sync by hand is exactly the kind of thing a rollout breaks on.
+    """
+    mapped = set(ROLE_ENV_KEYS)
+    expected = set(roles.ROLE_KEYS)
+    if mapped != expected:
+        missing = sorted(expected - mapped)
+        extra = sorted(mapped - expected)
+        raise SystemExit(
+            f"role config drift: {roles.ROLE_KEYS=} vs {ROLE_ENV_KEYS=}. "
+            f"Fix roles.py/config.py: missing={missing}, extra={extra}"
+        )
 
 
 def _load() -> Config:
     load_dotenv(Path(__file__).parent / ".env")
+    _check_role_keys()
 
     try:
         guild_id = int(_env_or_exit("GUILD_ID"))

@@ -1,0 +1,13 @@
+[tool.ruff]
+# match the Python version the bot runs on
+target-version = "py312"
+line-length = 100
+exclude = [".venv", "__pycache__", ".ruff_cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# line length is enforced by `ruff format`; E501 would double-flag it
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
