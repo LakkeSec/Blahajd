@@ -18,6 +18,9 @@ ROLE_KEYS = (
     "docent",
     "ethical_hacking",
     "cloud_defence",
+    "blahaj",
+    "sin",
+    "student_council",
 )
 
 # human-readable labels, used in the confirmation screen
@@ -31,35 +34,62 @@ ROLE_LABELS = {
     "docent": "Docent 🐐",
     "ethical_hacking": "Ethical Hacking 🥷",
     "cloud_defence": "Cloud Automation & Defence 🧙‍♂️",
+    "blahaj": "Blahaj 🦈",
+    "sin": "Sin 💡",
+    "student_council": "Studentenraad ⚖️",
 }
+
+
+def selected_years(answers: dict) -> list[str]:
+    """Normalize the (possibly multi-select) year answer to a list.
+
+    Before the multi-select change the answer was a single string like "2";
+    keep accepting those so in-flight sessions don't break.
+    """
+    year = answers.get("year", [])
+    if isinstance(year, str):
+        return [year]
+    return list(year)
 
 
 def resolve_roles(answers: dict) -> set[str]:
     """Return the exact set of role keys these answers map to."""
+    roles = set()
     who = answers.get("who")
     if who == "teacher":
-        return {"docent"}
-    if who == "graduate":
-        return {"alumni"}
+        roles.add("docent")
+    elif who == "graduate":
+        roles.add("alumni")
+    else:
+        # everyone below this line is a student
+        roles.add("itf")
+        program = answers.get("program")
+        if program == "app_ai":
+            roles.add("app_ai")
+        elif program == "digital_innovation":
+            roles.add("digital_innovation")
+        # cloud & cybersecurity students don't have a program role of their own
 
-    # everyone below this line is a student
-    roles = {"itf"}
-    program = answers.get("program")
-    if program == "app_ai":
-        roles.add("app_ai")
-    elif program == "digital_innovation":
-        roles.add("digital_innovation")
-    # cloud & cybersecurity students don't have a program role of their own
+        years = selected_years(answers)
+        if "2" in years:
+            roles.add("year_2")
+        if "3" in years:
+            roles.add("year_3")
+            if program == "cloud":
+                # the specialisation question is only asked in this case
+                track = answers.get("track")
+                if track in ("ethical_hacking", "cloud_defence"):
+                    roles.add(track)
 
-    year = answers.get("year")
-    if year == "2":
-        roles.add("year_2")
-    elif year == "3":
-        roles.add("year_3")
-        if program == "cloud":
-            # the specialisation question is only asked in this case
-            track = answers.get("track")
-            if track in ("ethical_hacking", "cloud_defence"):
-                roles.add(track)
+    if answers.get("blahaj") == "yes":
+        roles.add("blahaj")
+
+    activities = answers.get("activity", [])
+    if isinstance(activities, str):
+        activities = [activities]
+    if "sin" in activities:
+        roles.add("sin")
+    if "student_council" in activities:
+        roles.add("student_council")
 
     return roles

@@ -30,11 +30,19 @@ ANSWER_LABELS = {
         "digital_innovation": "Digital Innovation",
         "cloud": "Cloud & Cybersecurity",
     },
-    "year": {"1": "1st year", "2": "2nd year", "3": "3rd year", "other": "Other"},
+    "year": {"1": "1st year", "2": "2nd year", "3": "3rd year"},
     "track": {
         "ethical_hacking": "Ethical Hacking 🥷",
         "cloud_defence": "Cloud Automation & Defence 🧙‍♂️",
         "neither": "Not enrolled",
+    },
+    "blahaj": {
+        "yes": "Has a Blåhaj friend 🦈",
+        "no": "No",
+    },
+    "activity": {
+        "sin": "Sin 💡",
+        "student_council": "Studentenraad ⚖️",
     },
 }
 
@@ -44,6 +52,13 @@ def _answers_summary(answers: dict) -> str:
     for step, value in answers.items():
         if step == "name":
             lines.append(f"name: {value}")
+            continue
+        if isinstance(value, list):
+            if not value:
+                lines.append(f"{step}: none")
+                continue
+            labels = [ANSWER_LABELS.get(step, {}).get(v) or v for v in value]
+            lines.append(f"{step}: {', '.join(labels)}")
             continue
         label = ANSWER_LABELS.get(step, {}).get(value)
         lines.append(f"{step}: {label or value}")
@@ -190,13 +205,15 @@ class RequestView(discord.ui.View):
         to_add, to_remove = guild_utils.role_diff(member, self.target, roles_by_key)
 
         try:
-            if to_remove:
-                await member.remove_roles(
-                    *[roles_by_key[k] for k in to_remove], reason="Approved role request"
-                )
+            # add before removing so a partial failure can never leave the
+            # member stripped of roles
             if to_add:
                 await member.add_roles(
                     *[roles_by_key[k] for k in to_add], reason="Approved role request"
+                )
+            if to_remove:
+                await member.remove_roles(
+                    *[roles_by_key[k] for k in to_remove], reason="Approved role request"
                 )
         except (discord.Forbidden, discord.HTTPException) as exc:
             log.warning("role change failed for %s: %s", self.member_id, exc)

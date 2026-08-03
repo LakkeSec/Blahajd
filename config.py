@@ -24,6 +24,9 @@ ROLE_ENV_KEYS = {
     "docent": "ROLE_DOCENT",
     "ethical_hacking": "ROLE_ETHICAL_HACKING",
     "cloud_defence": "ROLE_CLOUD_AUTOMATION_DEFENCE",
+    "blahaj": "ROLE_BLAHAJ",
+    "sin": "ROLE_SIN",
+    "student_council": "ROLE_STUDENT_COUNCIL",
 }
 
 
@@ -68,17 +71,20 @@ def _load() -> Config:
     try:
         guild_id = int(_env_or_exit("GUILD_ID"))
         role_ids = {key: int(_env_or_exit(env)) for key, env in ROLE_ENV_KEYS.items()}
+        request_channel_id = int(_env_or_exit("REQUEST_CHANNEL_ID"))
+        maintainer_role_id = int(_env_or_exit("MAINTAINER_ROLE_ID"))
     except ValueError:
         raise SystemExit(
-            "GUILD_ID and all ROLE_* values in .env must be numbers (role IDs, not names)."
+            "GUILD_ID, REQUEST_CHANNEL_ID, MAINTAINER_ROLE_ID and all ROLE_* "
+            "values in .env must be numbers (role IDs, not names)."
         ) from None
 
     return Config(
         token=_env_or_exit("DISCORD_TOKEN"),
         guild_id=guild_id,
         role_ids=role_ids,
-        request_channel_id=int(_env_or_exit("REQUEST_CHANNEL_ID")),
-        maintainer_role_id=int(_env_or_exit("MAINTAINER_ROLE_ID")),
+        request_channel_id=request_channel_id,
+        maintainer_role_id=maintainer_role_id,
         db_path=os.getenv("DB_PATH", str(Path(__file__).parent / "blahajd.db")),
     )
 

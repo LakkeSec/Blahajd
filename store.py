@@ -47,7 +47,7 @@ def _conn() -> sqlite3.Connection:
     return sqlite3.connect(_db_path)
 
 
-def upsert_session(user_id: int, answers: dict[str, str], status: str) -> None:
+def upsert_session(user_id: int, answers: dict[str, object], status: str) -> None:
     if status not in STATUSES:
         raise ValueError(f"unknown session status: {status}")
     with _conn() as conn:

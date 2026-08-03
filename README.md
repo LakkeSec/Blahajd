@@ -10,9 +10,12 @@ sets their roles based on the answers.
   button-based interview.
 - Questions: who you are (student / graduate / teacher), your name (with a
   polite request to set your nickname accordingly), and for students: program
-  (Cloud & Cybersecurity first — it's the common one), year, and an optional
-  specialisation that most people skip. Teachers and alumni are done after
-  the first two questions.
+  (Cloud & Cybersecurity first — it's the common one), year (select all that
+  apply — mixed schedules are normal), and an optional specialisation that
+  most people skip. Teachers and alumni are done after
+  the first two questions. Everyone closes out by telling Blåhaj whether they
+  have a Blåhaj friend — yeses get the Blahaj 🦈 role — and which
+  extracurriculars they're in (SIN 💡 and/or Studentenraad ⚖️, or none).
 - The interview ends with a confirmation screen listing exactly which roles
   would be applied.
 - Confirming posts a **role request** to a mod-only channel with
@@ -35,7 +38,11 @@ sets their roles based on the answers.
 | Student, Cloud & Cybersecurity | ITF🐊 + year role |
 | 2nd year student | + 2CCS 🐊 |
 | 3rd year student | + 3CCS🐊 |
+| Student taking courses across years | + each matching year role (e.g. 2nd + 3rd → 2CCS 🐊 + 3CCS 🐊) |
 | 3rd year, Cloud & Cybersecurity | optionally + Ethical Hacking 🥷 or Cloud Automation & Defence 🧙♂️ |
+| Anyone with a Blåhaj friend | + Blahaj 🦈 |
+| Member of SIN | + Sin 💡 |
+| Member of Studentenraad | + Studentenraad ⚖️ |
 
 ## Setup
 
@@ -94,7 +101,9 @@ owner).
   The bot was built for a small, well-known community.
 - Every role change is written to an audit log in SQLite (`blahajd.db`).
 - Sessions survive bot restarts, but an interview interrupted by a restart is
-  best redone with `/interview @user`.
+  best redone with `/interview @user`. The Approve/Reject buttons on pending
+  requests in the mod channel also stop working after a restart — resend the
+  interview to have the request posted fresh.
 - DMs are throttled to one per second during a rollout to stay friendly to the
   Discord API.
 

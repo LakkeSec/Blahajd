@@ -1,4 +1,4 @@
-"""The DM interview: a small button-driven flow.
+"""The DM interview: a small component-driven flow.
 
 One message is reused for the whole conversation — each answer edits it in
 place, so the DM doesn't turn into a wall of messages.
@@ -36,22 +36,18 @@ QUESTIONS = {
         [
             # cloud is the common one, so it goes first
             ("Cloud & Cybersecurity", "cloud", discord.ButtonStyle.primary),
-            ("APP/AI", "app_ai", discord.ButtonStyle.primary),
+            ("APP/AI/ML", "app_ai", discord.ButtonStyle.primary),
             ("Digital Innovation", "digital_innovation", discord.ButtonStyle.primary),
         ],
     ),
     "year": (
-        "Which year are you in?",
-        [
-            ("1st", "1", discord.ButtonStyle.primary),
-            ("2nd", "2", discord.ButtonStyle.primary),
-            ("3rd", "3", discord.ButtonStyle.primary),
-            ("Other", "other", discord.ButtonStyle.secondary),
-        ],
+        "Which years are you taking courses in? Select all that apply — "
+        "lots of people do a mixed schedule.",
+        [],
     ),
     "track": (
-        "Last one! Some 3rd years grab a specialisation — an optional side "
-        "quest. Most people skip it, no shame:",
+        "Some 3rd years grab a specialisation — an optional side quest. "
+        "Most people skip it, no shame:",
         [
             ("Not enrolled — skip", "neither", discord.ButtonStyle.secondary),
             ("Ethical Hacking 🥷", "ethical_hacking", discord.ButtonStyle.primary),
@@ -70,9 +66,33 @@ QUESTIONS = {
             ("Enter your name", "name", discord.ButtonStyle.primary),
         ],
     ),
+    "blahaj": (
+        "Do you have a Blåhaj friend? 🦈",
+        [
+            ("Yes 🦈", "yes", discord.ButtonStyle.primary),
+            ("No", "no", discord.ButtonStyle.secondary),
+        ],
+    ),
+    "activity": (
+        "Last one! Do you help out with anything outside class? Select all that apply.",
+        [],
+    ),
 }
 
-QUESTION_ORDER = ("who", "name", "program", "year", "track")
+QUESTION_ORDER = ("who", "name", "program", "year", "track", "blahaj", "activity")
+
+# multi-select year options (label, value)
+YEAR_OPTIONS = (
+    ("1st", "1"),
+    ("2nd", "2"),
+    ("3rd", "3"),
+)
+
+# multi-select extracurricular options (label, value)
+ACTIVITY_OPTIONS = (
+    ("Sin 💡", "sin"),
+    ("Studentenraad ⚖️", "student_council"),
+)
 
 
 def rollout_embed() -> discord.Embed:
@@ -111,12 +131,105 @@ class StartView(discord.ui.View):
 
 def build_question_view(user_id: int, answers: dict, step: str) -> discord.ui.View:
     _, options = QUESTIONS[step]
+    if step == "year":
+        return YearView(user_id, answers)
+    if step == "activity":
+        return ActivityView(user_id, answers)
     view = discord.ui.View(timeout=None)
     for label, value, style in options:
         button = discord.ui.Button(label=label, style=style, custom_id=f"{step}:{value}")
         button.callback = _make_answer_callback(user_id, answers, step, value)
         view.add_item(button)
     return view
+
+
+class YearView(discord.ui.View):
+    """Multi-select year picker — mix-and-match years, then hit Continue."""
+
+    def __init__(self, user_id: int, answers: dict):
+        super().__init__(timeout=None)
+        self._user_id = user_id
+        self._answers = answers
+        self._selected: list[str] = []
+
+    @discord.ui.select(
+        placeholder="Select all years that apply",
+        min_values=1,
+        max_values=len(YEAR_OPTIONS),
+        options=[discord.SelectOption(label=label, value=value) for label, value in YEAR_OPTIONS],
+    )
+    async def pick(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id != self._user_id:
+            await interaction.response.send_message("This interview isn't for you.", ephemeral=True)
+            return
+        self._selected = list(select.values)
+        # keep the select open so they can revise the mix before continuing
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Continue", style=discord.ButtonStyle.primary)
+    async def continue_(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if interaction.user.id != self._user_id:
+            await interaction.response.send_message("This interview isn't for you.", ephemeral=True)
+            return
+        if not self._selected:
+            await interaction.response.send_message(
+                "Pick at least one year before continuing.",
+                ephemeral=True,
+            )
+            return
+        self._answers["year"] = self._selected
+        store.upsert_session(self._user_id, self._answers, status="active")
+        await _advance(interaction, self._user_id, self._answers, "year")
+
+
+class ActivityView(discord.ui.View):
+    """Multi-select extracurricular picker — SIN and/or Studentenraad, or None."""
+
+    def __init__(self, user_id: int, answers: dict):
+        super().__init__(timeout=None)
+        self._user_id = user_id
+        self._answers = answers
+        self._selected: list[str] = []
+
+    @discord.ui.select(
+        placeholder="Select all that apply",
+        min_values=1,
+        max_values=len(ACTIVITY_OPTIONS),
+        options=[
+            discord.SelectOption(label=label, value=value) for label, value in ACTIVITY_OPTIONS
+        ],
+    )
+    async def pick(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id != self._user_id:
+            await interaction.response.send_message("This interview isn't for you.", ephemeral=True)
+            return
+        self._selected = list(select.values)
+        # keep the select open so they can revise the mix before continuing
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Continue", style=discord.ButtonStyle.secondary)
+    async def continue_(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if interaction.user.id != self._user_id:
+            await interaction.response.send_message("This interview isn't for you.", ephemeral=True)
+            return
+        if not self._selected:
+            await interaction.response.send_message(
+                "Pick at least one activity before continuing, or hit None.",
+                ephemeral=True,
+            )
+            return
+        self._answers["activity"] = self._selected
+        store.upsert_session(self._user_id, self._answers, status="active")
+        await _advance(interaction, self._user_id, self._answers, "activity")
+
+    @discord.ui.button(label="None", style=discord.ButtonStyle.primary)
+    async def none(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if interaction.user.id != self._user_id:
+            await interaction.response.send_message("This interview isn't for you.", ephemeral=True)
+            return
+        self._answers["activity"] = []
+        store.upsert_session(self._user_id, self._answers, status="active")
+        await _advance(interaction, self._user_id, self._answers, "activity")
 
 
 class NameModal(discord.ui.Modal, title="What's your name?"):
@@ -183,21 +296,26 @@ async def _advance(
         # everyone gets asked their name next
         await ask(interaction, "name", answers)
     elif step == "name":
-        # teachers and alumni are done here; students continue
+        # teachers and alumni are done with identity questions; everyone
+        # still gets asked about their Blåhaj friend
         if answers.get("who") in ("teacher", "graduate"):
-            await _show_confirmation(interaction, user_id, answers)
+            await ask(interaction, "blahaj", answers)
         else:
             await ask(interaction, "program", answers)
     elif step == "year":
         # the specialisation question only exists for cloud third years
-        if answers.get("year") == "3" and answers.get("program") == "cloud":
+        if "3" in roles.selected_years(answers) and answers.get("program") == "cloud":
             await ask(interaction, "track", answers)
         else:
-            await _show_confirmation(interaction, user_id, answers)
+            await ask(interaction, "blahaj", answers)
     elif step == "track":
+        await ask(interaction, "blahaj", answers)
+    elif step == "blahaj":
+        await ask(interaction, "activity", answers)
+    elif step == "activity":
         await _show_confirmation(interaction, user_id, answers)
-    else:
-        await ask(interaction, QUESTION_ORDER[QUESTION_ORDER.index(step) + 1], answers)
+    elif step == "program":
+        await ask(interaction, "year", answers)
 
 
 async def _show_confirmation(interaction: discord.Interaction, user_id: int, answers: dict) -> None:
@@ -289,6 +407,18 @@ async def _submit_request(
             view=None,
         )
         return
+    except (discord.Forbidden, discord.HTTPException) as exc:
+        log.warning("could not fetch %s: %s", user_id, exc)
+        # keep the confirmation alive so they can retry once it's fixed
+        await interaction.response.edit_message(
+            embed=embeds.styled(
+                title="Request stuck",
+                description="Blåhaj couldn't reach the server — try again in a bit.",
+                color=ERROR_COLOR,
+            ),
+            view=ConfirmView(user_id, answers, target),
+        )
+        return
 
     roles_by_key, missing = guild_utils.configured_roles(guild)
     if missing:
@@ -339,10 +469,23 @@ async def _submit_request(
         )
         return
 
-    await channel.send(
-        embed=approvals.build_request_embed(member, answers, to_add, to_remove),
-        view=approvals.RequestView(user_id, answers, target),
-    )
+    try:
+        await channel.send(
+            embed=approvals.build_request_embed(member, answers, to_add, to_remove),
+            view=approvals.RequestView(user_id, answers, target),
+        )
+    except (discord.Forbidden, discord.HTTPException) as exc:
+        log.warning("could not post request for %s: %s", user_id, exc)
+        # keep the confirmation alive so they can retry once it's fixed
+        await interaction.response.edit_message(
+            embed=embeds.styled(
+                title="Request lost in transit",
+                description="Your request couldn't be sent — try again in a bit.",
+                color=ERROR_COLOR,
+            ),
+            view=ConfirmView(user_id, answers, target),
+        )
+        return
     store.upsert_session(user_id, answers, status="pending")
     await interaction.response.edit_message(
         embed=embeds.styled(
