@@ -70,7 +70,13 @@ def resolve_roles(answers: dict) -> set[str]:
             roles.add("digital_innovation")
         # cloud & cybersecurity students don't have a program role of their own
 
-        years = selected_years(answers)
+        # APP/AI and Digital Innovation students don't get year roles — the
+        # year question is only relevant for cloud & cybersecurity students
+        years = []
+        if program != "app_ai" and program != "digital_innovation":
+            years = selected_years(answers)
+        # first-year cloud students get nothing beyond the base ITF role:
+        # year "1" exists in the picker but intentionally maps to no role
         if "2" in years:
             roles.add("year_2")
         if "3" in years:

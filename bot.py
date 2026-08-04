@@ -52,6 +52,9 @@ PRESENCES = [
     discord.CustomActivity(name="🦈 handing out roles, one DM at a time"),
     discord.Activity(type=discord.ActivityType.playing, name="spot-the-cloud-student"),
     discord.CustomActivity(name="🦈 404: Blåhaj not found… kidding"),
+    discord.CustomActivity(name="🦈 Eating APP/AI students since '26"),
+    discord.CustomActivity(name="🦈 Blub."),
+
 ]
 ROTATION_SECONDS = 45
 
@@ -62,7 +65,6 @@ async def presence_loop() -> None:
     while not client.is_closed():
         try:
             await client.change_presence(activity=PRESENCES[i % len(PRESENCES)])
-            log.info("presence set to %r", PRESENCES[i % len(PRESENCES)])
         except Exception as exc:  # noqa: BLE001 - keep the loop alive
             log.warning("presence update failed: %s", exc)
         i += 1

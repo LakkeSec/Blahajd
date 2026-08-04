@@ -314,7 +314,12 @@ async def _advance(
     elif step == "activity":
         await _show_confirmation(interaction, user_id, answers)
     elif step == "program":
-        await ask(interaction, "year", answers)
+        # APP/AI and Digital Innovation students don't get year roles, so skip
+        # the year question for them entirely
+        if answers.get("program") in ("app_ai", "digital_innovation"):
+            await ask(interaction, "blahaj", answers)
+        else:
+            await ask(interaction, "year", answers)
 
 
 async def _show_confirmation(interaction: discord.Interaction, user_id: int, answers: dict) -> None:
