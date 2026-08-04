@@ -8,8 +8,9 @@ sets their roles based on the answers.
 
 - An admin (or the server owner) runs `/rollout`, which DMs every member a
   button-based interview.
-- Questions: who you are (student / graduate / teacher), your name (with a
-  polite request to set your nickname accordingly), and for students: program
+- Questions: who you are (student / graduate / teacher), your name (which
+  Blåhaj uses as your server nickname once a request is approved), and for
+  students: program
   (Cloud & Cybersecurity first — it's the common one), year (select all that
   apply — mixed schedules are normal), and an optional specialisation that
   most people skip. Teachers and alumni are done after
@@ -81,6 +82,38 @@ sets their roles based on the answers.
    pip install -r requirements.txt
    python bot.py
    ```
+
+## Run with Docker
+
+Skip the manual install above if you'd rather containerise — the repo ships a
+`Dockerfile`. Do steps 1–5 of [Setup](#setup) first (you still need a filled-in
+`.env`), then:
+
+1. Point the database at the volume and let the run command pass your `.env`
+   into the container (your secrets never end up inside the image):
+
+   ```
+   DB_PATH=/data/blahajd.db
+   ```
+
+   Add that to `.env`.
+
+2. Build and run:
+
+   ```
+   docker build -t blahajd .
+   docker run -d --name blahajd --env-file .env \
+     -v blahajd-data:/data --restart unless-stopped blahajd
+   ```
+
+3. Watch the logs (the bot logs its presence rotations and slash command sync):
+
+   ```
+   docker logs -f blahajd
+   ```
+
+The `blahajd-data` volume keeps `blahajd.db` between restarts and rebuilds.
+To update the bot: `docker build -t blahajd . && docker restart blahajd`.
 
 ## Commands
 

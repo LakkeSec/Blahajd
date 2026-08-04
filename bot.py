@@ -37,6 +37,38 @@ client = commands.Bot(
 )
 
 
+async def setup_hook() -> None:
+    client.loop.create_task(presence_loop())
+
+
+# discord.py only calls Client.setup_hook if it's a method on the client;
+# a bare module-level function with that name would never run.
+client.setup_hook = setup_hook
+
+
+PRESENCES = [
+    discord.CustomActivity(name="🦈 Blåhaj is hungry for role requests"),
+    discord.Activity(type=discord.ActivityType.watching, name="the yearly role refresh"),
+    discord.CustomActivity(name="🦈 handing out roles, one DM at a time"),
+    discord.Activity(type=discord.ActivityType.playing, name="spot-the-cloud-student"),
+    discord.CustomActivity(name="🦈 404: Blåhaj not found… kidding"),
+]
+ROTATION_SECONDS = 45
+
+
+async def presence_loop() -> None:
+    await client.wait_until_ready()
+    i = 0
+    while not client.is_closed():
+        try:
+            await client.change_presence(activity=PRESENCES[i % len(PRESENCES)])
+            log.info("presence set to %r", PRESENCES[i % len(PRESENCES)])
+        except Exception as exc:  # noqa: BLE001 - keep the loop alive
+            log.warning("presence update failed: %s", exc)
+        i += 1
+        await asyncio.sleep(ROTATION_SECONDS)
+
+
 async def all_members(guild: discord.Guild) -> list[discord.Member]:
     """Every member of the guild, minus bots.
 

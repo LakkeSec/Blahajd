@@ -59,9 +59,8 @@ QUESTIONS = {
         ],
     ),
     "name": (
-        "What should we call you? Type your (first) name and pretty please "
-        "also set your server nickname to include it, so everyone knows "
-        "who's behind the account.",
+        "What should we call you? Type your (first) name — Blåhaj will "
+        "set it as your server nickname once a maintainer approves.",
         [
             ("Enter your name", "name", discord.ButtonStyle.primary),
         ],
@@ -325,8 +324,8 @@ async def _show_confirmation(interaction: discord.Interaction, user_id: int, ans
     name = answers.get("name")
     if name:
         description += (
-            f"Name: **{name}** — remember to change your nickname to match, "
-            "so we know who we're dealing with.\n\n"
+            f"Name: **{name}** — Blåhaj will set your server nickname to "
+            "this once a maintainer approves.\n\n"
         )
     description += "A maintainer signs off before anything goes live."
     embed = embeds.styled(

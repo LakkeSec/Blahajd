@@ -1,0 +1,22 @@
+# never commit secrets, and don't bake them into images either
+.env
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ruff_cache/
+
+# runtime data
+*.db
+*.db-journal
+
+# version control
+.git/
+
+# editor / os junk
+.idea/
+.vscode/
+.DS_Store

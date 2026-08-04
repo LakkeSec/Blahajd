@@ -77,7 +77,7 @@ def build_request_embed(
     if name:
         embed.add_field(
             name="Name",
-            value=name,
+            value=f"{name} (nickname will be set on approval)",
             inline=False,
         )
     embed.add_field(name="Answers", value=_answers_summary(answers), inline=False)
@@ -94,7 +94,11 @@ def build_request_embed(
     return embed
 
 
-def _outcome_embed(approved: bool, added: set[str] = frozenset()) -> discord.Embed:
+def _outcome_embed(
+    approved: bool,
+    added: set[str] = frozenset(),
+    nickname: str | None = None,
+) -> discord.Embed:
     if approved:
         if added:
             description = "Your roles are updated:\n" + "\n".join(
@@ -102,6 +106,8 @@ def _outcome_embed(approved: bool, added: set[str] = frozenset()) -> discord.Emb
             )
         else:
             description = "Your roles are already up to date. Enjoy the new year!"
+        if nickname:
+            description += f"\n\nYour nickname was set to **{nickname}**."
         return embeds.styled(
             title="Access granted ✅",
             description=description,
@@ -232,4 +238,14 @@ class RequestView(discord.ui.View):
             f"added={sorted(to_add)} removed={sorted(to_remove)}",
         )
         store.upsert_session(self.member_id, self.answers, status="completed")
-        return _outcome_embed(approved=True, added=to_add)
+
+        nickname = self.answers.get("name")
+        nickname_set = None
+        if nickname:
+            try:
+                await member.edit(nick=nickname, reason="Approved role request")
+                nickname_set = nickname
+            except (discord.Forbidden, discord.HTTPException) as exc:
+                log.warning("nickname change failed for %s: %s", self.member_id, exc)
+
+        return _outcome_embed(approved=True, added=to_add, nickname=nickname_set)
