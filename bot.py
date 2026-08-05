@@ -154,7 +154,7 @@ async def send_interview_message(member: discord.Member) -> None:
 @app_commands.check(guards.check_guild)
 @app_commands.check(guards.check_maintainer)
 async def cmd_rollout(interaction: discord.Interaction) -> None:
-    await interaction.response.defer(thinking=True)
+    await interaction.response.defer(thinking=True, ephemeral=True)
 
     guild = configured_guild()
     if guild is None:
@@ -192,7 +192,8 @@ async def cmd_rollout(interaction: discord.Interaction) -> None:
             title="Rollout started 🚀",
             description=description,
             color=embeds.BRAND,
-        )
+        ),
+        ephemeral=True,
     )
 
 
@@ -207,7 +208,7 @@ async def cmd_interview(interaction: discord.Interaction, member: discord.Member
             ephemeral=True,
         )
         return
-    await interaction.response.defer(thinking=True)
+    await interaction.response.defer(thinking=True, ephemeral=True)
     try:
         await send_interview_message(member)
         store.upsert_session(member.id, {}, status="sent")
@@ -228,7 +229,7 @@ async def cmd_interview(interaction: discord.Interaction, member: discord.Member
 @app_commands.check(guards.check_guild)
 async def cmd_update(interaction: discord.Interaction) -> None:
     """The public version of /interview — anyone can run it on themselves."""
-    await interaction.response.defer(thinking=True)
+    await interaction.response.defer(thinking=True, ephemeral=True)
     try:
         await send_interview_message(interaction.user)
         store.upsert_session(interaction.user.id, {}, status="sent")
@@ -276,7 +277,8 @@ async def cmd_rollout_status(interaction: discord.Interaction) -> None:
             title="Rollout status",
             description=description,
             color=embeds.BRAND,
-        )
+        ),
+        ephemeral=True,
     )
 
 
