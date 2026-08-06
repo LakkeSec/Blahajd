@@ -12,6 +12,7 @@ ROLE_KEYS = (
     "itf",
     "app_ai",
     "digital_innovation",
+    "it_graduaten",
     "year_2",
     "year_3",
     "alumni",
@@ -28,6 +29,7 @@ ROLE_LABELS = {
     "itf": "ITF 🐊",
     "app_ai": "APP/AIHAAI/ML ㊙️",
     "digital_innovation": "Digital Innovation 🤖",
+    "it_graduaten": "IT Graduaten 🦉",
     "year_2": "2CCS 🐊",
     "year_3": "3CCS 🐊",
     "alumni": "Alumni 🦒",
@@ -68,12 +70,15 @@ def resolve_roles(answers: dict) -> set[str]:
             roles.add("app_ai")
         elif program == "digital_innovation":
             roles.add("digital_innovation")
+        elif program == "associates":
+            roles.add("it_graduaten")
         # cloud & cybersecurity students don't have a program role of their own
 
-        # APP/AI and Digital Innovation students don't get year roles — the
-        # year question is only relevant for cloud & cybersecurity students
+        # APP/AI, Digital Innovation and Associates Degree students don't get
+        # year roles — the year question is only relevant for cloud &
+        # cybersecurity students
         years = []
-        if program != "app_ai" and program != "digital_innovation":
+        if program not in ("app_ai", "digital_innovation", "associates"):
             years = selected_years(answers)
         # first-year cloud students get nothing beyond the base ITF role:
         # year "1" exists in the picker but intentionally maps to no role

@@ -38,6 +38,7 @@ QUESTIONS = {
             ("Cloud & Cybersecurity", "cloud", discord.ButtonStyle.primary),
             ("APP/AI/ML", "app_ai", discord.ButtonStyle.primary),
             ("Digital Innovation", "digital_innovation", discord.ButtonStyle.primary),
+            ("Associates Degree", "associates", discord.ButtonStyle.primary),
         ],
     ),
     "year": (
@@ -316,7 +317,7 @@ async def _advance(
     elif step == "program":
         # APP/AI and Digital Innovation students don't get year roles, so skip
         # the year question for them entirely
-        if answers.get("program") in ("app_ai", "digital_innovation"):
+        if answers.get("program") in ("app_ai", "digital_innovation", "associates"):
             await ask(interaction, "blahaj", answers)
         else:
             await ask(interaction, "year", answers)
@@ -391,7 +392,7 @@ async def _submit_request(
         await interaction.response.edit_message(
             embed=embeds.styled(
                 title="Connection dropped",
-                description="Blåhaj couldn't reach the server — try again in a bit.",
+                description="Blåhaj couldn't reach the server Try again in a bit. If it keeps failing, poke a maintainer.",
                 color=ERROR_COLOR,
             ),
             view=None,
@@ -405,7 +406,7 @@ async def _submit_request(
         await interaction.response.edit_message(
             embed=embeds.styled(
                 title="Rolled back",
-                description="Looks like you've left the server — nothing to update then.",
+                description="Looks like you've left the server?! How dare you?! Nothing changed, sorry to see you go.",
                 color=ERROR_COLOR,
             ),
             view=None,
@@ -417,7 +418,7 @@ async def _submit_request(
         await interaction.response.edit_message(
             embed=embeds.styled(
                 title="Request stuck",
-                description="Blåhaj couldn't reach the server — try again in a bit.",
+                description="Blåhaj couldn't reach the server. Try again in a bit. If it keeps failing, poke a maintainer.",
                 color=ERROR_COLOR,
             ),
             view=ConfirmView(user_id, answers, target),
@@ -447,7 +448,7 @@ async def _submit_request(
         await interaction.response.edit_message(
             embed=embeds.styled(
                 title="All good 🎉",
-                description="You already have the right roles. Enjoy the new year!",
+                description="You already have the right roles. Blub.",
                 color=DONE_COLOR,
             ),
             view=None,
@@ -466,7 +467,7 @@ async def _submit_request(
         await interaction.response.edit_message(
             embed=embeds.styled(
                 title="Request lost in transit",
-                description="Your request couldn't be sent — try again in a bit.",
+                description="Your request couldn't be sent.. Hmmm.. try again in a bit okay?",
                 color=ERROR_COLOR,
             ),
             view=ConfirmView(user_id, answers, target),
@@ -484,7 +485,7 @@ async def _submit_request(
         await interaction.response.edit_message(
             embed=embeds.styled(
                 title="Request lost in transit",
-                description="Your request couldn't be sent — try again in a bit.",
+                description="Your request couldn't be sent.. Hmmm.. try again in a bit okay?",
                 color=ERROR_COLOR,
             ),
             view=ConfirmView(user_id, answers, target),
@@ -494,7 +495,7 @@ async def _submit_request(
     await interaction.response.edit_message(
         embed=embeds.styled(
             title="Request sent ✅",
-            description=("A maintainer will review it and you'll get the verdict in your DMs."),
+            description=("A maintainer will review it and you'll get the verdict in your DMs. Blub."),
             color=DONE_COLOR,
         ),
         view=None,
