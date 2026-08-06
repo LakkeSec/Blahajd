@@ -18,6 +18,7 @@ ROLE_ENV_KEYS = {
     "itf": "ROLE_ITF",
     "app_ai": "ROLE_APP_AI",
     "digital_innovation": "ROLE_DIGITAL_INNOVATION",
+    "it_graduaten": "ROLE_IT_GRADUATEN",
     "year_2": "ROLE_YEAR_2",
     "year_3": "ROLE_YEAR_3",
     "alumni": "ROLE_ALUMNI",

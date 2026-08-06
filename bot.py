@@ -54,6 +54,14 @@ PRESENCES = [
     discord.CustomActivity(name="🦈 404: Blåhaj not found… kidding"),
     discord.CustomActivity(name="🦈 Eating APP/AI students since '26"),
     discord.CustomActivity(name="🦈 Blub."),
+    discord.CustomActivity(name="🦈 Cronc."),
+    discord.CustomActivity(name="🦈 Cuddling the hajs."),
+    discord.CustomActivity(name="🦈 Farting in the datacenter intake."),
+    discord.CustomActivity(name="🦈 0 days since hating on APP/AI."),
+    discord.CustomActivity(name="🦈 Deciphering the slop."),
+    discord.CustomActivity(name="🦈 Stop the slop."),
+    discord.CustomActivity(name="🦈 https://www.ikea.com/be/nl/p/blahaj-pluchen-speelgoed-haai-30373588/"),
+
 
 ]
 ROTATION_SECONDS = 45

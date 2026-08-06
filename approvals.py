@@ -28,6 +28,7 @@ ANSWER_LABELS = {
     "program": {
         "app_ai": "APP/AI",
         "digital_innovation": "Digital Innovation",
+        "associates": "Associates Degree",
         "cloud": "Cloud & Cybersecurity",
     },
     "year": {"1": "1st year", "2": "2nd year", "3": "3rd year"},
@@ -103,9 +104,9 @@ def _outcome_embed(
         if added:
             description = "Your roles are updated:\n" + "\n".join(
                 f"- {roles.ROLE_LABELS[k]}" for k in sorted(added)
-            )
+            ) + "\n\n If you want to change them again in the future, just run /update. Blub."
         else:
-            description = "Your roles are already up to date. Enjoy the new year!"
+            description = "Your roles are already up to date. Blub."
         if nickname:
             description += f"\n\nYour nickname was set to **{nickname}**."
         return embeds.styled(
