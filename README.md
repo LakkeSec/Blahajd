@@ -50,7 +50,8 @@ sets their roles based on the answers.
 1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications)
    and add a bot user to it. Copy the bot token (**Bot → Token**) — it goes
    into `DISCORD_TOKEN` in `.env`.
-2. In the developer portal, enable **Privileged Gateway Intents → Members**.
+2. In the developer portal, enable **Privileged Gateway Intents → Server Members Intent**.
+   Message Content Intent and Presence Intent can stay disabled.
 3. Invite the bot with the `Manage Roles`, `Send Messages`, `View Channels`
    and `Read Message History` permissions, plus the `applications.commands`
    scope:

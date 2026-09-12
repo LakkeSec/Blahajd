@@ -9,7 +9,6 @@ import logging
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 
 import config
 import embeds
@@ -21,13 +20,11 @@ log = logging.getLogger("blahajd")
 
 intents = discord.Intents.default()
 intents.members = True  # needed to see everyone and hand out roles
-# we don't read chat, but commands.Bot warns without this intent
-intents.message_content = True
+# Slash commands, buttons and modals do not need message content.
+intents.message_content = False
 
-# Bot instead of Client because we want a slash command tree.
-# the prefix is never used; it's just required to construct one.
-client = commands.Bot(
-    command_prefix="!",
+# Use a slash-command tree without the unused prefix-command machinery.
+client = discord.Client(
     intents=intents,
     # chunk_guilds_at_startup (defaults to True when the members intent is
     # on) sends gateway member-chunk requests on every connect. Discord's
@@ -35,6 +32,8 @@ client = commands.Bot(
     # fires on_ready. We fetch members over REST when needed instead.
     chunk_guilds_at_startup=False,
 )
+
+tree = app_commands.CommandTree(client)
 
 
 async def setup_hook() -> None:
@@ -103,7 +102,7 @@ TARGET_GUILD = discord.Object(id=config.CONFIG.guild_id)
 
 
 # guard rejections are turned into friendly ephemeral messages here
-@client.tree.error
+@tree.error
 async def on_tree_error(
     interaction: discord.Interaction, error: app_commands.AppCommandError
 ) -> None:
@@ -142,7 +141,7 @@ async def on_ready() -> None:
     # guild-scoped sync registers instantly; a bare sync() would register
     # globally, which can take up to an hour to show up
     try:
-        synced = await client.tree.sync(guild=guild)
+        synced = await tree.sync(guild=guild)
     except discord.HTTPException as exc:
         log.error("slash command sync failed: %s", exc)
     else:
@@ -157,7 +156,7 @@ async def send_interview_message(member: discord.Member) -> None:
     await dm.send(embed=interview.rollout_embed(), view=interview.StartView(member.id))
 
 
-@client.tree.command(name="rollout", description="DM every member with the yearly role interview")
+@tree.command(name="rollout", description="DM every member with the yearly role interview")
 @app_commands.guilds(TARGET_GUILD)
 @app_commands.check(guards.check_guild)
 @app_commands.check(guards.check_maintainer)
@@ -205,7 +204,7 @@ async def cmd_rollout(interaction: discord.Interaction) -> None:
     )
 
 
-@client.tree.command(name="interview", description="Send the role interview to a single member")
+@tree.command(name="interview", description="Send the role interview to a single member")
 @app_commands.guilds(TARGET_GUILD)
 @app_commands.check(guards.check_guild)
 @app_commands.check(guards.check_maintainer)
@@ -229,7 +228,7 @@ async def cmd_interview(interaction: discord.Interaction, member: discord.Member
     await interaction.followup.send(f"Interview sent to {member.display_name}.", ephemeral=True)
 
 
-@client.tree.command(
+@tree.command(
     name="update",
     description="Request a role update for yourself",
 )
@@ -253,7 +252,7 @@ async def cmd_update(interaction: discord.Interaction) -> None:
     )
 
 
-@client.tree.command(name="rollout_status", description="How the rollout is going")
+@tree.command(name="rollout_status", description="How the rollout is going")
 @app_commands.guilds(TARGET_GUILD)
 @app_commands.check(guards.check_guild)
 @app_commands.check(guards.check_maintainer)
@@ -290,7 +289,7 @@ async def cmd_rollout_status(interaction: discord.Interaction) -> None:
     )
 
 
-@client.tree.command(name="rollout_reset", description="Wipe all sessions (audit log is kept)")
+@tree.command(name="rollout_reset", description="Wipe all sessions (audit log is kept)")
 @app_commands.guilds(TARGET_GUILD)
 @app_commands.check(guards.check_guild)
 @app_commands.check(guards.check_maintainer)
