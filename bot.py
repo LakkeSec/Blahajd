@@ -300,6 +300,81 @@ async def cmd_rollout_reset(interaction: discord.Interaction) -> None:
     )
 
 
+class DeleteMessageModal(discord.ui.Modal, title="Delete Message"):
+    reason = discord.ui.TextInput(
+        label="Reason",
+        style=discord.TextStyle.paragraph,
+        placeholder="Why should this message be deleted?",
+        required=True,
+        max_length=500,
+    )
+
+    def __init__(self, target_message: discord.Message):
+        super().__init__()
+        self.target_message = target_message
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        await self._execute_deletion(interaction, self.reason.value)
+
+    async def _execute_deletion(self, interaction: discord.Interaction, reason: str) -> None:
+        target_message = self.target_message
+        author = target_message.author
+
+        try:
+            await target_message.delete()
+        except discord.NotFound:
+            await interaction.response.send_message(
+                "That message was already deleted.", ephemeral=True
+            )
+            return
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                "I don't have permission to delete that message.", ephemeral=True
+            )
+            return
+        except discord.HTTPException as exc:
+            log.warning("Failed to delete message %s: %s", target_message.id, exc)
+            await interaction.response.send_message(
+                "Failed to delete the message.", ephemeral=True
+            )
+            return
+
+        await interaction.response.send_message(
+            "Moderation asked me to remove this message. Blub."
+        )
+
+        try:
+            dm = await author.create_dm()
+            await dm.send(
+                f"Your message in {interaction.channel.mention} was deleted by moderation.\n"
+                f"Reason: {reason}"
+            )
+        except discord.Forbidden:
+            log.warning("Could not DM %s about deleted message", author.id)
+        except discord.HTTPException as exc:
+            log.warning("Failed to DM %s about deleted message: %s", author.id, exc)
+
+        store.log_action(
+            author.id,
+            "message deleted",
+            f"deleted_by={interaction.user.id} reason={reason}",
+        )
+
+
+@client.tree.context_menu(name="Delete Message")
+@app_commands.guilds(TARGET_GUILD)
+@app_commands.check(guards.check_guild)
+@app_commands.check(guards.check_maintainer)
+async def cmd_deletemsg(interaction: discord.Interaction, message: discord.Message) -> None:
+    """Open a modal to enter the deletion reason."""
+    if message.author.bot:
+        await interaction.response.send_message(
+            "Cannot delete bot messages via this command.", ephemeral=True
+        )
+        return
+    await interaction.response.send_modal(DeleteMessageModal(message))
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
