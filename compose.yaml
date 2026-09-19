@@ -1,0 +1,16 @@
+services:
+  blahajd:
+    build: .
+    image: blahajd
+    container_name: blahajd
+    env_file:
+      - .env
+    environment:
+      DB_PATH: /data/blahajd.db
+    volumes:
+      - blahajd-data:/data
+    restart: unless-stopped
+
+volumes:
+  blahajd-data:
+    name: blahajd-data

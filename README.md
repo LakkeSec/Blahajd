@@ -86,35 +86,42 @@ sets their roles based on the answers.
 
 ## Run with Docker
 
-Skip the manual install above if you'd rather containerise — the repo ships a
-`Dockerfile`. Do steps 1–5 of [Setup](#setup) first (you still need a filled-in
-`.env`), then:
+Do steps 1–5 of [Setup](#setup) first, then run these commands from the repo
+directory with Docker Compose installed.
 
-1. Point the database at the volume and let the run command pass your `.env`
-   into the container (your secrets never end up inside the image):
+Build and start the bot (also use this after pulling updates):
 
-   ```
-   DB_PATH=/data/blahajd.db
-   ```
+```sh
+docker compose up -d --build
+```
 
-   Add that to `.env`.
+Compose reads `.env` and sets `DB_PATH=/data/blahajd.db` so the database stays
+in the persistent `blahajd-data` volume. The bot restarts automatically unless
+you explicitly stop it.
 
-2. Build and run:
+Watch logs:
 
-   ```
-   docker build -t blahajd .
-   docker run -d --name blahajd --env-file .env \
-     -v blahajd-data:/data --restart unless-stopped blahajd
-   ```
+```sh
+docker compose logs -f
+```
 
-3. Watch the logs (the bot logs its presence rotations and slash command sync):
+Stop and remove the container, keeping the database volume:
 
-   ```
-   docker logs -f blahajd
-   ```
+```sh
+docker compose down
+```
 
-The `blahajd-data` volume keeps `blahajd.db` between restarts and rebuilds.
-To update the bot: `docker build -t blahajd . && docker restart blahajd`.
+If you previously used the `docker run` command, remove the old container
+once before starting Compose:
+
+```sh
+docker stop blahajd
+docker rm blahajd
+docker compose up -d --build
+```
+
+Compose reuses the existing `blahajd-data` volume from that command. Avoid
+`docker compose down -v` unless you intend to delete the database too.
 
 ## Commands
 

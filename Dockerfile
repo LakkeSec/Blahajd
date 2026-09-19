@@ -1,14 +1,7 @@
 # Blahajd — the yearly role refresh bot
 #
-# Build:
-#   docker build -t blahajd .
-#
-# Run (with a filled-in .env from the setup steps in the README):
-#   docker run -d --name blahajd --env-file .env \
-#     -v blahajd-data:/data --restart unless-stopped blahajd
-#
-# Set DB_PATH=/data/blahajd.db in your .env so the database lives on the
-# volume and survives container rebuilds.
+# Build and run (with a filled-in .env; see README):
+#   docker compose up -d --build
 
 FROM python:3.12-slim
 

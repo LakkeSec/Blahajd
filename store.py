@@ -1,17 +1,16 @@
 """SQLite persistence: interview sessions and the audit log.
 
-Sessions exist so a rollout can be resumed and so /rollout_status has
-something to report. The audit log is append-only and is never wiped.
+Sessions track interview progress so /rollout_status has something to
+report. The audit log is append-only and is never wiped.
 
-Persistence is optional: if the database file doesn't exist (or can't be
-opened), every store call becomes a no-op and the bot keeps running —
-just without sessions or an audit log.
+The database file is created automatically if it doesn't exist. If it can't
+be opened, every store call becomes a no-op and the bot keeps running — just
+without sessions or an audit log.
 """
 
 import json
 import logging
 import sqlite3
-from pathlib import Path
 
 log = logging.getLogger("blahajd.store")
 
@@ -43,21 +42,11 @@ _disabled = False
 
 
 def init(db_path: str) -> None:
-    """Set up persistence, or quietly give up if there's no database.
-
-    A missing file means "run without persistence" rather than "create one":
-    sqlite would happily make an empty db on the first connect, but a db that
-    lives on a read-only volume or gets wiped with the container isn't worth
-    pretending to keep.
-    """
+    """Create the database and tables if needed, preserving existing records."""
     global _db_path, _disabled
     _db_path = db_path
     _disabled = False
 
-    if not Path(db_path).exists():
-        log.warning("database %s not found — running without persistence", db_path)
-        _disabled = True
-        return
     # a fresh connection per call keeps things simple; the workload here is tiny
     try:
         with sqlite3.connect(_db_path) as conn:
