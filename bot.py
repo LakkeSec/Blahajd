@@ -361,7 +361,7 @@ class DeleteMessageModal(discord.ui.Modal, title="Delete Message"):
         )
 
 
-@client.tree.context_menu(name="Delete Message")
+@tree.context_menu(name="Delete Message")
 @app_commands.guilds(TARGET_GUILD)
 @app_commands.check(guards.check_guild)
 @app_commands.check(guards.check_maintainer)
