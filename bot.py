@@ -59,9 +59,9 @@ PRESENCES = [
     discord.CustomActivity(name="🦈 0 days since hating on APP/AI."),
     discord.CustomActivity(name="🦈 Deciphering the slop."),
     discord.CustomActivity(name="🦈 Stop the slop."),
-    discord.CustomActivity(name="🦈 https://www.ikea.com/be/nl/p/blahaj-pluchen-speelgoed-haai-30373588/"),
-
-
+    discord.CustomActivity(
+        name="🦈 https://www.ikea.com/be/nl/p/blahaj-pluchen-speelgoed-haai-30373588/"
+    ),
 ]
 ROTATION_SECONDS = 45
 
@@ -150,10 +150,54 @@ async def on_ready() -> None:
             log.error("sync returned no commands — check the guilds() decorators")
 
 
+@client.event
+async def on_member_join(member: discord.Member) -> None:
+    """Send interview DM to new members and notify mods."""
+    if member.bot:
+        return
+    try:
+        await send_interview_message(member)
+        store.upsert_session(member.id, {}, status="sent")
+    except discord.Forbidden:
+        log.info("Could not DM %s — DMs closed", member.id)
+    except discord.HTTPException as exc:
+        log.warning("DM to new member %s failed: %s", member.id, exc)
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Unexpected error DMing new member %s: %s", member.id, exc)
+
+    await notify_mod_channel_new_member(member)
+
+
 async def send_interview_message(member: discord.Member) -> None:
     """DM a member the start prompt. Raises Forbidden if DMs are closed."""
     dm = await member.create_dm()
     await dm.send(embed=interview.rollout_embed(), view=interview.StartView(member.id))
+
+
+async def notify_mod_channel_new_member(member: discord.Member) -> None:
+    """Send a simple notification to the mod channel when a new member joins and gets the interview DM."""
+    channel = member.guild.get_channel(config.CONFIG.request_channel_id)
+    if channel is None:
+        try:
+            channel = await member.guild.fetch_channel(config.CONFIG.request_channel_id)
+        except discord.HTTPException:
+            channel = None
+    if channel is None:
+        log.warning(
+            "request channel %s not found for new member notification",
+            config.CONFIG.request_channel_id,
+        )
+        return
+
+    embed = embeds.styled(
+        title="New member joined 🦈",
+        description=f"{member.mention} ({member.display_name}) joined and was sent the interview DM.",
+        color=embeds.BRAND,
+    )
+    try:
+        await channel.send(embed=embed)
+    except (discord.Forbidden, discord.HTTPException) as exc:
+        log.warning("could not send new member notification to mod channel: %s", exc)
 
 
 @tree.command(name="rollout", description="DM every member with the yearly role interview")
@@ -334,14 +378,10 @@ class DeleteMessageModal(discord.ui.Modal, title="Delete Message"):
             return
         except discord.HTTPException as exc:
             log.warning("Failed to delete message %s: %s", target_message.id, exc)
-            await interaction.response.send_message(
-                "Failed to delete the message.", ephemeral=True
-            )
+            await interaction.response.send_message("Failed to delete the message.", ephemeral=True)
             return
 
-        await interaction.response.send_message(
-            "Moderation asked me to remove this message. Blub."
-        )
+        await interaction.response.send_message("Moderation asked me to remove this message. Blub.")
 
         try:
             dm = await author.create_dm()
