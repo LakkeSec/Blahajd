@@ -24,10 +24,13 @@ ERROR_COLOR = embeds.ERROR
 # question -> (prompt, [(button label, answer value, button style), ...])
 QUESTIONS = {
     "who": (
-        "Identity check: who are you? (This is the legit login prompt, promise)",
+        "Identity check: who are you? (This is the legit login prompt, promise)\n"
+        "Still studying, including Graduaat / Associates Degree? Pick "
+        "**Current student**. **Alumni** is only for people who already "
+        "finished their studies.",
         [
-            ("Student 🎓", "student", discord.ButtonStyle.primary),
-            ("Graduate 🦒", "graduate", discord.ButtonStyle.primary),
+            ("Current student 🎓", "student", discord.ButtonStyle.primary),
+            ("Alumni (already graduated) 🦒", "graduate", discord.ButtonStyle.primary),
             ("Teacher 🐐", "teacher", discord.ButtonStyle.primary),
         ],
     ),
@@ -38,7 +41,7 @@ QUESTIONS = {
             ("Cloud & Cybersecurity", "cloud", discord.ButtonStyle.primary),
             ("APP/AI/ML", "app_ai", discord.ButtonStyle.primary),
             ("Digital Innovation", "digital_innovation", discord.ButtonStyle.primary),
-            ("Associates Degree", "associates", discord.ButtonStyle.primary),
+            ("Associates Degree (Graduaat)", "associates", discord.ButtonStyle.primary),
         ],
     ),
     "year": (

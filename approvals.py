@@ -21,14 +21,14 @@ log = logging.getLogger("blahajd.approvals")
 # answers -> something a mod can actually read
 ANSWER_LABELS = {
     "who": {
-        "student": "Student 🎓",
-        "graduate": "Graduate 🦒",
+        "student": "Current student 🎓",
+        "graduate": "Alumni (already graduated) 🦒",
         "teacher": "Teacher 🐐",
     },
     "program": {
         "app_ai": "APP/AI",
         "digital_innovation": "Digital Innovation",
-        "associates": "Associates Degree",
+        "associates": "Associates Degree (Graduaat)",
         "cloud": "Cloud & Cybersecurity",
     },
     "year": {"1": "1st year", "2": "2nd year", "3": "3rd year"},
