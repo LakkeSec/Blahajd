@@ -24,11 +24,15 @@ ERROR_COLOR = embeds.ERROR
 # question -> (prompt, [(button label, answer value, button style), ...])
 QUESTIONS = {
     "who": (
-        "Identity check: who are you? (This is the legit login prompt, promise)",
+        "Identity check: who are you? (This is the legit login prompt, promise)\n"
+        "Still studying, including Graduaat / Associates Degree? Pick "
+        "**Current student**. **Alumni** is only for people who already "
+        "finished their studies. Not studying or teaching here? Pick **Not a student**.",
         [
-            ("Student 🎓", "student", discord.ButtonStyle.primary),
-            ("Graduate 🦒", "graduate", discord.ButtonStyle.primary),
+            ("Current student 🎓", "student", discord.ButtonStyle.primary),
+            ("Alumni (already graduated) 🦒", "graduate", discord.ButtonStyle.primary),
             ("Teacher 🐐", "teacher", discord.ButtonStyle.primary),
+            ("Not a student 👋", "guest", discord.ButtonStyle.secondary),
         ],
     ),
     "program": (
@@ -38,7 +42,7 @@ QUESTIONS = {
             ("Cloud & Cybersecurity", "cloud", discord.ButtonStyle.primary),
             ("APP/AI/ML", "app_ai", discord.ButtonStyle.primary),
             ("Digital Innovation", "digital_innovation", discord.ButtonStyle.primary),
-            ("Associates Degree", "associates", discord.ButtonStyle.primary),
+            ("Associates Degree (Graduaat)", "associates", discord.ButtonStyle.primary),
         ],
     ),
     "year": (
@@ -296,9 +300,9 @@ async def _advance(
         # everyone gets asked their name next
         await ask(interaction, "name", answers)
     elif step == "name":
-        # teachers and alumni are done with identity questions; everyone
-        # still gets asked about their Blåhaj friend
-        if answers.get("who") in ("teacher", "graduate"):
+        # teachers, alumni and guests are done with identity questions;
+        # everyone still gets asked about their Blåhaj friend
+        if answers.get("who") in ("teacher", "graduate", "guest"):
             await ask(interaction, "blahaj", answers)
         else:
             await ask(interaction, "program", answers)
@@ -311,7 +315,11 @@ async def _advance(
     elif step == "track":
         await ask(interaction, "blahaj", answers)
     elif step == "blahaj":
-        await ask(interaction, "activity", answers)
+        # extracurriculars are school things, so guests skip straight to the end
+        if answers.get("who") == "guest":
+            await _show_confirmation(interaction, user_id, answers)
+        else:
+            await ask(interaction, "activity", answers)
     elif step == "activity":
         await _show_confirmation(interaction, user_id, answers)
     elif step == "program":
@@ -325,8 +333,11 @@ async def _advance(
 
 async def _show_confirmation(interaction: discord.Interaction, user_id: int, answers: dict) -> None:
     target = roles.resolve_roles(answers)
-    lines = "\n".join(f"- {roles.ROLE_LABELS[key]}" for key in sorted(target))
-    description = f"Blåhaj will request these roles:\n{lines}\n\n"
+    if target:
+        lines = "\n".join(f"- {roles.ROLE_LABELS[key]}" for key in sorted(target))
+        description = f"Blåhaj will request these roles:\n{lines}\n\n"
+    else:
+        description = "No roles to request.\n\n"
     name = answers.get("name")
     if name:
         description += (

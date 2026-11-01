@@ -8,13 +8,15 @@ sets their roles based on the answers.
 
 - An admin (or the server owner) runs `/rollout`, which DMs every member a
   button-based interview.
-- Questions: who you are (student / graduate / teacher), your name (which
+- Questions: who you are (current student / alumni / teacher /
+  not a student; Graduaat students count as current students), your name (which
   Blåhaj uses as your server nickname once a request is approved), and for
   students: program
   (Cloud & Cybersecurity first — it's the common one), year (select all that
   apply — mixed schedules are normal), and an optional specialisation that
-  most people skip. Teachers and alumni are done after
-  the first two questions. Everyone closes out by telling Blåhaj whether they
+  most people skip. Teachers, alumni and non-students are done
+  after the first two questions (non-students also skip the
+  extracurriculars question). Everyone closes out by telling Blåhaj whether they
   have a Blåhaj friend — yeses get the Blahaj 🦈 role — and which
   extracurriculars they're in (SIN 💡 and/or Studentenraad ⚖️, or none).
 - The interview ends with a confirmation screen listing exactly which roles
@@ -33,7 +35,8 @@ sets their roles based on the answers.
 | Answers | Roles given |
 |---|---|
 | Teacher | Docent 🐐 |
-| Graduate | Alumni 🦒 |
+| Alumni (already graduated) | Alumni 🦒 |
+| Not a student | no identity role (only Blahaj 🦈 if they have one) |
 | Student, APP/AI | ITF🐊 + APP/AIHAAI/ML ㊙️ + year role |
 | Student, Digital Innovation | ITF🐊 + Digital Innovation 🤖 + year role |
 | Student, Cloud & Cybersecurity | ITF🐊 + year role |
