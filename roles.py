@@ -62,6 +62,9 @@ def resolve_roles(answers: dict) -> set[str]:
         roles.add("docent")
     elif who == "graduate":
         roles.add("alumni")
+    elif who == "guest":
+        # not a student: no identity role, only the Blåhaj/activity ones below
+        pass
     else:
         # everyone below this line is a student
         roles.add("itf")

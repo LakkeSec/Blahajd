@@ -24,6 +24,7 @@ ANSWER_LABELS = {
         "student": "Current student 🎓",
         "graduate": "Alumni (already graduated) 🦒",
         "teacher": "Teacher 🐐",
+        "guest": "Not a student 👋",
     },
     "program": {
         "app_ai": "APP/AI",
